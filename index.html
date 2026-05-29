@@ -217,22 +217,6 @@
       <div id="feed-list"></div>
     </div>
 
-    <!-- ===== TAB: CHAT ===== -->
-    <div id="tab-chat" class="tab-panel">
-      <div id="chat-messages"></div>
-      <div id="gif-picker">
-        <div class="gif-search-row">
-          <input type="text" id="gif-search-input" placeholder="Search GIFs…" maxlength="50" autocomplete="off"/>
-        </div>
-        <div id="gif-results" class="gif-grid"></div>
-      </div>
-      <div class="chat-input-row">
-        <input type="text" id="chat-input" placeholder="Say something…" maxlength="200" autocomplete="off"/>
-        <button id="gif-toggle-btn" onclick="toggleGifPicker()">GIF</button>
-        <button id="chat-send-btn" onclick="sendChatMessage()">→</button>
-      </div>
-    </div>
-
     <!-- Bottom tab bar -->
     <nav id="tab-bar">
       <button class="tab-btn active" data-tab="leaderboard">
@@ -252,11 +236,6 @@
       <button class="tab-btn" data-tab="curses">
         <span class="tab-icon">🧿</span>
         <span>Curses</span>
-      </button>
-      <button class="tab-btn" data-tab="chat">
-        <span class="tab-icon">💬</span>
-        <span>Chat</span>
-        <span class="notif-dot" id="dot-chat"></span>
       </button>
     </nav>
   </div>

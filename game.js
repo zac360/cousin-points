@@ -45,7 +45,6 @@ const S = {
   myId: null, me: null,
   players:{}, bets:{}, duels:{}, feed:[], votes:{}, bounties:{},
   tiers:{}, tab:'leaderboard', battleDuelId:null, lastFeedSeen:0,
-  chat:[], lastChatSeen:0,
 };
 
 // ============================================================
@@ -57,7 +56,6 @@ const dRef  = id => db.collection('duels').doc(id);
 const fRef  = id => db.collection('feed').doc(id);
 const vRef  = id => db.collection('votes').doc(id);
 const boRef = id => db.collection('bounties').doc(id);
-const chRef = id => db.collection('chat').doc(id);
 const newId = col => db.collection(col).doc().id;
 const ts    = ()  => firebase.firestore.Timestamp.now();
 const INC   = n   => firebase.firestore.FieldValue.increment(n);
@@ -649,7 +647,7 @@ let _logoBoilInterval  = null;
 async function init() {
   S.myId = localStorage.getItem('cp_player_id');
   S.lastFeedSeen = parseInt(localStorage.getItem('cp_last_feed')||'0',10);
-  S.lastChatSeen = parseInt(localStorage.getItem('cp_last_chat')||'0',10);
+
   renderAvatarBuilder();
   if (S.myId) {
     try {
@@ -758,21 +756,6 @@ function attachListeners() {
     renderLeaderboard();
   });
 
-  db.collection('chat').orderBy('timestamp','asc').limit(50).onSnapshot(snap=>{
-    const prevIds = new Set(S.chat.map(m=>m.id));
-    S.chat=[];
-    snap.forEach(d=>S.chat.push({id:d.id,...d.data()}));
-    // Push notif for brand-new incoming messages (skip system announcements)
-    S.chat.forEach(m=>{
-      if(!prevIds.has(m.id) && m.senderId!==S.myId && m.senderId!=='system') {
-        const t = m.timestamp?.toMillis?.() || 0;
-        if(t > S.lastChatSeen) pushNotif(m.name, m.text);
-      }
-    });
-    if(S.tab==='chat') renderChatMessages();
-    updateChatBadge();
-    pruneChatMessages();
-  });
 }
 
 // ============================================================
@@ -1781,11 +1764,6 @@ async function addFeed(text, icon, meta={}){
   try {
     const feedDoc = {text,icon:icon||'📜',comments:[],timestamp:ts(),...meta};
     await db.collection('feed').doc(newId('feed')).set(feedDoc);
-    // Mirror to chat as a system announcement so nothing gets missed
-    await db.collection('chat').doc(newId('chat')).set({
-      senderId:'system', name:'Cousin Points Announcement!',
-      text, icon:icon||'📜', timestamp:ts(),
-    });
   } catch(e){ console.error('feed',e); }
 }
 
@@ -1917,7 +1895,6 @@ function updateTabDots(){
   const dd=el('dot-duels'); if(dd) dd.style.display=hasPending?'block':'none';
   const hasUnvotedBets=Object.values(S.bets).some(b=>b.status==='open'&&!b.votes?.[S.myId]&&b.subject!==S.myId);
   const db2=el('dot-bets'); if(db2) db2.style.display=hasUnvotedBets?'block':'none';
-  updateChatBadge();
 }
 function markFeedSeen(){
   S.lastFeedSeen=Date.now();
@@ -1927,140 +1904,7 @@ function markFeedSeen(){
 
 // ============================================================
 // CHAT
-// ============================================================
-// Get a free key at https://developers.giphy.com/
-const GIPHY_KEY = 'AiVbXkf1muySdaEdltaqnJEVURM3jU6B';
 
-const CHAT_TTL_MS = 43200000; // 12 hours
-async function pruneChatMessages() {
-  const cutoff = Date.now() - CHAT_TTL_MS;
-  const old = S.chat.filter(m => (m.timestamp?.toMillis?.() || 0) < cutoff);
-  if (!old.length) return;
-  const batch = db.batch();
-  old.forEach(m => batch.delete(chRef(m.id)));
-  await batch.commit();
-}
-
-function markChatSeen() {
-  S.lastChatSeen = Date.now();
-  localStorage.setItem('cp_last_chat', String(S.lastChatSeen));
-  updateChatBadge();
-}
-function updateChatBadge() {
-  const dot = el('dot-chat'); if(!dot) return;
-  const n = S.chat.filter(m => {
-    const t = m.timestamp?.toMillis?.() || m.timestamp || 0;
-    return t > S.lastChatSeen && m.senderId !== S.myId;
-  }).length;
-  if(n > 0) { dot.textContent = n; dot.style.display = 'flex'; }
-  else       { dot.textContent = ''; dot.style.display = 'none'; }
-}
-
-// ---- Browser push notifications ----
-function requestNotifPermission() {
-  if (!('Notification' in window) || Notification.permission !== 'default') return;
-  Notification.requestPermission();
-}
-function pushNotif(title, body) {
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  if (document.hasFocus()) return;
-  try { new Notification(title, { body, icon: 'APP ASSETS/icon.png' }); } catch(e) {}
-}
-function renderChatMessages() {
-  const list = el('chat-messages'); if(!list) return;
-  if(!S.chat.length) {
-    list.innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><p>No messages yet…</p></div>';
-    return;
-  }
-  list.innerHTML = S.chat.map(m => {
-    const t = m.timestamp?.toMillis?.() || m.timestamp || 0;
-    // System announcements get their own centered style
-    if(m.senderId === 'system') {
-      return `<div class="chat-announcement">
-        <span class="chat-ann-icon">${m.icon||'📜'}</span>
-        <div class="chat-ann-label">Cousin Points Announcement!</div>
-        <div class="chat-ann-text">${esc(m.text)}</div>
-        <div class="chat-ann-time">${fmtAgo(t)}</div>
-      </div>`;
-    }
-    const isMe = m.senderId === S.myId;
-    const p = S.players[m.senderId];
-    const avatar = p ? renderPlayer(p, 28) : `<div style="width:28px;height:28px;border-radius:50%;background:var(--bg-input)"></div>`;
-    const content = m.type === 'gif'
-      ? `<img src="${esc(m.gifUrl)}" class="chat-gif" loading="lazy" />`
-      : `<div class="chat-bubble">${esc(m.text)}</div>`;
-    return `<div class="chat-msg${isMe?' mine':''}">
-      <div class="chat-msg-avatar">${avatar}</div>
-      <div class="chat-msg-wrap">
-        <div class="chat-meta">${isMe?'you':esc(m.name)} · ${fmtAgo(t)}</div>
-        ${content}
-      </div>
-    </div>`;
-  }).join('');
-  list.scrollTop = list.scrollHeight;
-}
-async function sendChatMessage() {
-  const inp = el('chat-input'); if(!inp) return;
-  const text = inp.value.trim(); if(!text) return;
-  inp.value = '';
-  try {
-    await db.collection('chat').doc(newId('chat')).set({
-      senderId: S.myId, name: S.me?.name||'?',
-      text, timestamp: ts(),
-    });
-  } catch(e) { console.error('chat',e); inp.value = text; }
-}
-
-// ---- GIF picker ----
-let _gifSearchTimer = null;
-function toggleGifPicker() {
-  const picker = el('gif-picker'), btn = el('gif-toggle-btn');
-  const open = picker.classList.toggle('open');
-  btn.classList.toggle('active', open);
-  if (open) { el('gif-search-input')?.focus(); loadTrendingGifs(); }
-}
-async function loadTrendingGifs() {
-  if (!GIPHY_KEY) { renderGifResults(null); return; }
-  try {
-    const r = await fetch(`https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_KEY}&limit=12&rating=pg`);
-    renderGifResults((await r.json()).data || []);
-  } catch(e) { renderGifResults([]); }
-}
-async function onGifSearch(q) {
-  if (!GIPHY_KEY) { renderGifResults(null); return; }
-  if (!q.trim()) { loadTrendingGifs(); return; }
-  try {
-    const r = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_KEY}&q=${encodeURIComponent(q)}&limit=12&rating=pg`);
-    renderGifResults((await r.json()).data || []);
-  } catch(e) { renderGifResults([]); }
-}
-function renderGifResults(gifs) {
-  const grid = el('gif-results'); if (!grid) return;
-  if (!GIPHY_KEY || gifs === null) {
-    grid.innerHTML = '<div class="gif-empty">Add your GIPHY API key to game.js</div>';
-    return;
-  }
-  if (!gifs.length) { grid.innerHTML = '<div class="gif-empty">No GIFs found</div>'; return; }
-  grid.innerHTML = gifs.map(g => {
-    const thumb = g.images?.fixed_width_small?.url || '';
-    return `<div class="gif-item" data-url="${esc(g.images?.downsized?.url||g.images?.original?.url||'')}">
-      <img src="${esc(thumb)}" loading="lazy" /></div>`;
-  }).join('');
-  grid.querySelectorAll('.gif-item').forEach(item =>
-    item.addEventListener('click', () => sendGif(item.dataset.url))
-  );
-}
-async function sendGif(url) {
-  if (!url) return;
-  el('gif-picker')?.classList.remove('open');
-  el('gif-toggle-btn')?.classList.remove('active');
-  try {
-    await db.collection('chat').doc(newId('chat')).set({
-      senderId: S.myId, name: S.me?.name||'?',
-      type: 'gif', gifUrl: url, text: '', timestamp: ts(),
-    });
-  } catch(e) { console.error('gif',e); }
-}
 
 // ============================================================
 // MODAL & TOAST
@@ -2103,12 +1947,11 @@ function switchTab(name){
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));
   const panel=el(`tab-${name}`); if(panel) panel.classList.add('active');
-  document.body.classList.toggle('tab-chat-active', name==='chat');
   if(name==='bets')   renderBets();
   if(name==='duels')  {renderDuels();renderDuelPlayersList();}
   if(name==='curses') {renderActiveCurses();updateCurseSelect();}
   if(name==='feed')   {renderFeed();markFeedSeen();}
-  if(name==='chat')   {renderChatMessages();markChatSeen();requestNotifPermission();}
+
 }
 
 // ============================================================
@@ -2150,16 +1993,6 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Feed
   el('notif-btn')?.addEventListener('click',()=>{switchTab('feed');markFeedSeen();});
 
-  // Chat tab
-  el('chat-input')?.addEventListener('keydown',e=>{if(e.key==='Enter')sendChatMessage();});
-  el('gif-search-input')?.addEventListener('input',e=>{
-    clearTimeout(_gifSearchTimer);
-    _gifSearchTimer=setTimeout(()=>onGifSearch(e.target.value),350);
-  });
-  el('gif-search-input')?.addEventListener('keydown',e=>{
-    if(e.key==='Enter'){clearTimeout(_gifSearchTimer);onGifSearch(e.target.value);}
-  });
-
   init();
 });
 
@@ -2170,6 +2003,5 @@ Object.assign(window,{
   submitBattleAction,closeBattleScreen,playerPickerSelect,
   avbSetColor,avbSetCategory,avbSelectTile,
   openAvatarEdit,cancelAvatarEdit,saveAvatarEdit,
-  sendChatMessage, toggleGifPicker, sendGif,
   startFromLanding,
 });

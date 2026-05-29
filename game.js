@@ -30,7 +30,7 @@ function getTierMeta(tier) {
 }
 // Keep TIER_META for any legacy references
 const TIER_META = { council:{icon:'👑',label:'Head Council',cls:'tier-council'}, peasant:{icon:'💀',label:'Peasant',cls:'tier-peasant'} };
-const DAILY_MS         = 86400000;
+const DAILY_MS         = 43200000; // 12 hours
 const DUEL_TIMEOUT_MS  = 86400000;
 const DUEL_WAGER       = 2;
 const BOUNTY_COST      = 3;

@@ -1,0 +1,9 @@
+# Battle animations — not needed for deployment, battle screen falls back to static avatars
+APP ASSETS/Idel animation
+
+# Concept art / source files — not referenced by the app
+Consept art
+
+# Build tooling
+convert_to_gifs.py
+fix_transparency.py

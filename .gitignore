@@ -1,0 +1,16 @@
+# macOS junk
+.DS_Store
+._.DS_Store
+._*
+**/.DS_Store
+**/._*
+
+# Backup folder — originals safely stored locally, not needed in repo
+APP ASSETS 2/
+
+# Claude Code config
+.claude/
+
+# Build scripts — not part of the app
+convert_to_gifs.py
+fix_transparency.py

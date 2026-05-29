@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="theme-color" content="#FAF7F2"/>
+  <title>Cousin Points</title>
+  <link rel="stylesheet" href="style.css?v=3"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet"/>
+</head>
+<body>
+<div id="app">
+
+  <!-- LOADING -->
+  <div id="loading-screen">
+    <div class="loader"></div>
+    <span style="color:var(--text-dim);font-size:13px">Loading the realm…</span>
+  </div>
+
+  <!-- LANDING -->
+  <div id="landing-screen" style="display:none">
+    <img class="landing-layer" src="APP ASSETS/Start page assets/Start page BG.PNG" alt=""/>
+    <img class="landing-layer landing-logo-layer" id="landing-logo-0" src="APP ASSETS/Start page assets/Start Page Logo &quot;cousin points&quot;.PNG" alt="Cousin Points"/>
+    <img class="landing-layer landing-logo-layer" id="landing-logo-1" src="APP ASSETS/Start page assets/Start Page Logo &quot;cousin points&quot; 2.PNG" alt="" style="opacity:0"/>
+    <img class="landing-layer landing-btn-layer" src="APP ASSETS/Start page assets/Start botton .PNG" alt="Start" onclick="startFromLanding()"/>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toast-container"></div>
+
+
+  <!-- ==================== JOIN SCREEN ==================== -->
+  <div id="join-screen" style="display:none">
+
+    <!-- Cancel bar (edit mode only — sits above name pill) -->
+    <div class="avb-edit-bar">
+      <button class="avb-cancel-link" onclick="cancelAvatarEdit()">✕ Cancel</button>
+    </div>
+
+    <!-- Name pill -->
+    <div class="name-pill-section">
+      <div class="name-pill-wrap">
+        <input type="text" id="name-input" placeholder="Your name…" maxlength="20" autocomplete="off"/>
+      </div>
+    </div>
+
+    <div class="avb-wrap">
+
+      <!-- 3-column: category icons | preview | color blobs -->
+      <div class="avb-main-row">
+
+        <!-- Left: category selector icons -->
+        <div class="avb-cat-col" id="avb-cat-col"></div>
+
+        <!-- Center: avatar preview -->
+        <div class="avb-preview-wrap">
+          <div class="avb-preview" id="avb-preview"></div>
+          <div class="avb-shadow"></div>
+        </div>
+
+        <!-- Right: animated color blob swatches -->
+        <div class="avb-blob-col" id="avb-blob-col"></div>
+
+      </div>
+
+      <!-- Bottom: horizontal snap scroll wheel -->
+      <div class="avb-wheel-wrap">
+        <div class="avb-wheel" id="avb-wheel"></div>
+      </div>
+
+    </div>
+
+    <button class="join-btn" id="join-btn">Done — Join the Game!</button>
+
+  <!-- Victory phrase -->
+  <div class="avb-victory-section">
+    <div class="avb-victory-hint">💬 Victory phrase — pops up above your character when you win a battle</div>
+    <input type="text" id="victory-input" placeholder="Haha NERRRRRRD!" maxlength="40" autocomplete="off"/>
+  </div>
+  </div>
+
+  <!-- ==================== MAIN GAME ==================== -->
+  <div id="main-game" style="display:none">
+
+    <!-- Top bar -->
+    <header id="top-bar">
+      <div id="top-bar-left">
+        <div id="top-bar-avatar"></div>
+        <div>
+          <div id="top-bar-name">Loading…</div>
+          <div id="top-bar-tier"></div>
+        </div>
+      </div>
+      <div class="top-bar-right">
+        <button class="notif-btn" id="notif-btn" title="Notifications">🔔
+          <span id="notif-badge"></span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ===== TAB: LEADERBOARD ===== -->
+    <div id="tab-leaderboard" class="tab-panel active">
+
+      <div class="lb-title">Leaderboard</div>
+      <div id="leaderboard-list"></div>
+
+      <!-- Alerts -->
+      <div id="council-banner" class="council-banner" style="display:none"></div>
+      <div id="peasant-warning" class="peasant-warning" style="display:none">
+        💀 You are Peasant — weakest in the realm. Avoid duels or risk losing double.
+      </div>
+
+      <!-- Actions bar -->
+      <div class="lb-actions" id="lb-actions">
+        <button class="btn-gold" id="btn-daily" style="display:none">⭐ Claim Daily Point</button>
+        <div id="daily-countdown" class="countdown" style="display:none"></div>
+        <button class="btn-outline btn-sm" id="btn-tax" style="display:none">👑 Collect Tax</button>
+        <div id="tax-countdown" class="countdown" style="display:none"></div>
+        <button class="btn-outline btn-sm" id="btn-peasant-penalty" style="display:none">💀 Apply Penalty</button>
+        <div id="penalty-countdown" class="countdown" style="display:none"></div>
+        <button class="btn-outline btn-sm" id="btn-place-bounty">🎯 Place Bounty (3pts)</button>
+        <button class="btn-outline btn-sm" id="btn-start-vote">🗳️ Start Vote</button>
+      </div>
+
+    </div>
+
+    <!-- ===== TAB: BETS ===== -->
+    <div id="tab-bets" class="tab-panel">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="panel-title" style="margin:0">🎲 Bets</div>
+        <button class="btn-gold btn-sm" id="btn-create-bet">+ Create Bet</button>
+      </div>
+      <div id="bets-list"></div>
+    </div>
+
+    <!-- ===== TAB: DUELS ===== -->
+    <div id="tab-duels" class="tab-panel">
+      <div class="panel-title">⚔️ Duels</div>
+      <div class="card card-gold" style="margin-bottom:16px;font-size:13px">
+        <b>Rock Paper Scissors — Best of 3.</b> 🪨 beats ✂️ · ✂️ beats 📄 · 📄 beats 🪨<br>
+        Winner gains 2pts. No response in 24h = public cowardice + 1pt penalty.
+      </div>
+      <div class="section-label" style="margin-bottom:8px">Challenge a cousin</div>
+      <div id="duel-players-list" class="duel-players-list"></div>
+      <div class="panel-title" style="margin-top:16px">Active &amp; Recent</div>
+      <div id="duels-list"></div>
+    </div>
+
+    <!-- ===== TAB: CURSES ===== -->
+    <div id="tab-curses" class="tab-panel">
+      <div class="panel-title">🧿 Curses</div>
+      <div class="card" style="margin-bottom:14px;font-size:13px;color:var(--text-dim)">
+        Curses are cosmetic and social — no direct point theft. Cannot curse Peasants.
+      </div>
+
+      <div class="section-label" style="margin-bottom:8px">Choose target</div>
+      <div id="curse-target-wrap" style="margin-bottom:14px"></div>
+
+      <div class="section-label" style="margin-bottom:8px">Choose curse</div>
+      <div class="curse-grid" id="curse-grid">
+        <div class="curse-card" data-curse="stupidity">
+          <div class="curse-icon">🧠</div>
+          <div class="curse-name">Stupidity</div>
+          <div class="curse-cost">2pts • 1 hour</div>
+          <div class="curse-desc">Text appears backwards</div>
+        </div>
+        <div class="curse-card" data-curse="illiteracy">
+          <div class="curse-icon">📝</div>
+          <div class="curse-name">Illiteracy</div>
+          <div class="curse-cost">2pts • 1 hour</div>
+          <div class="curse-desc">Name replaced with gibberish</div>
+        </div>
+        <div class="curse-card" data-curse="invisibility">
+          <div class="curse-icon">👻</div>
+          <div class="curse-name">Invisibility</div>
+          <div class="curse-cost">3pts • 2 hours</div>
+          <div class="curse-desc">Wiped from leaderboard</div>
+        </div>
+        <div class="curse-card" data-curse="tiny">
+          <div class="curse-icon">🔬</div>
+          <div class="curse-name">Tiny</div>
+          <div class="curse-cost">1pt • 2 hours</div>
+          <div class="curse-desc">Avatar shrinks to 30%</div>
+        </div>
+        <div class="curse-card" data-curse="impostor">
+          <div class="curse-icon">🎭</div>
+          <div class="curse-name">Impostor</div>
+          <div class="curse-cost">3pts • 1 hour</div>
+          <div class="curse-desc">Name swaps with random cousin</div>
+        </div>
+        <div class="curse-card" data-curse="silence">
+          <div class="curse-icon">🤐</div>
+          <div class="curse-name">Silence</div>
+          <div class="curse-cost">3pts • 24 hours</div>
+          <div class="curse-desc">Can't create bets or duels</div>
+        </div>
+        <div class="curse-card" data-curse="poke">
+          <div class="curse-icon">👉</div>
+          <div class="curse-name">Poke</div>
+          <div class="curse-cost">Free • Instant</div>
+          <div class="curse-desc">Annoying notification</div>
+        </div>
+      </div>
+
+      <button class="btn-red" id="btn-cast-curse" style="width:100%;margin-top:12px">Cast Curse</button>
+
+      <div class="panel-title" style="margin-top:20px">Active Curses</div>
+      <div id="active-curses-list"></div>
+    </div>
+
+    <!-- ===== TAB: FEED (bell only — not in nav) ===== -->
+    <div id="tab-feed" class="tab-panel">
+      <div style="margin-bottom:14px">
+        <div class="panel-title" style="margin:0">📜 Activity Feed</div>
+      </div>
+      <div id="feed-list"></div>
+    </div>
+
+    <!-- ===== TAB: CHAT ===== -->
+    <div id="tab-chat" class="tab-panel">
+      <div id="chat-messages"></div>
+      <div id="gif-picker">
+        <div class="gif-search-row">
+          <input type="text" id="gif-search-input" placeholder="Search GIFs…" maxlength="50" autocomplete="off"/>
+        </div>
+        <div id="gif-results" class="gif-grid"></div>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-input" placeholder="Say something…" maxlength="200" autocomplete="off"/>
+        <button id="gif-toggle-btn" onclick="toggleGifPicker()">GIF</button>
+        <button id="chat-send-btn" onclick="sendChatMessage()">→</button>
+      </div>
+    </div>
+
+    <!-- Bottom tab bar -->
+    <nav id="tab-bar">
+      <button class="tab-btn active" data-tab="leaderboard">
+        <span class="tab-icon">🏆</span>
+        <span>Ranks</span>
+      </button>
+      <button class="tab-btn" data-tab="bets">
+        <span class="tab-icon">🎲</span>
+        <span>Bets</span>
+        <span class="notif-dot" id="dot-bets"></span>
+      </button>
+      <button class="tab-btn" data-tab="duels">
+        <span class="tab-icon">⚔️</span>
+        <span>Duels</span>
+        <span class="notif-dot" id="dot-duels"></span>
+      </button>
+      <button class="tab-btn" data-tab="curses">
+        <span class="tab-icon">🧿</span>
+        <span>Curses</span>
+      </button>
+      <button class="tab-btn" data-tab="chat">
+        <span class="tab-icon">💬</span>
+        <span>Chat</span>
+        <span class="notif-dot" id="dot-chat"></span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ==================== BATTLE SCREEN ==================== -->
+  <div id="battle-screen" style="display:none">
+
+    <!-- Header -->
+    <div class="btl-header">
+      <div class="btl-title">⚔️ BATTLE ⚔️</div>
+      <div class="btl-round-wrap">
+        <span class="btl-round-label" id="btl-round-label">Round 1 / 3</span>
+        <span> · Wager: 5pts ·</span>
+      </div>
+    </div>
+
+    <!-- Action timer bar -->
+    <div id="btl-timer-wrap" style="display:none">
+      <div id="btl-timer-bar"></div>
+    </div>
+
+    <!-- Arena: two fighters face-to-face -->
+    <div class="btl-arena">
+
+      <!-- Left fighter — YOU (actions are clickable) -->
+      <div class="btl-fighter" id="btf-left">
+        <div class="btl-speech-bubble" id="btl-bubble-left"></div>
+        <div class="btl-avatar-wrap mirror" id="btl-avatar-left"></div>
+        <div class="btl-fname" id="btl-fname-left"></div>
+        <div class="btl-fpts"  id="btl-fpts-left"></div>
+        <div class="btl-actions" id="btl-actions-left"></div>
+      </div>
+
+      <!-- Center divider -->
+      <div class="btl-center">
+        <div class="btl-vs">VS</div>
+      </div>
+
+      <!-- Right fighter — OPPONENT (mirrored, indicators only) -->
+      <div class="btl-fighter" id="btf-right">
+        <div class="btl-speech-bubble" id="btl-bubble-right"></div>
+        <div class="btl-avatar-wrap" id="btl-avatar-right"></div>
+        <div class="btl-fname" id="btl-fname-right"></div>
+        <div class="btl-fpts"  id="btl-fpts-right"></div>
+        <div class="btl-actions" id="btl-actions-right"></div>
+      </div>
+    </div>
+
+    <!-- Status / reveal impact -->
+    <div class="btl-impact" id="btl-impact"></div>
+    <div class="btl-status-msg" id="btl-status-msg">Choose your action!</div>
+    <div class="btl-round-outcome" id="btl-round-outcome"></div>
+
+    <!-- Round history log -->
+    <div class="btl-log" id="btl-log"></div>
+
+    <!-- End screen (hidden until battle over) -->
+    <div id="btl-over" style="display:none">
+      <div class="btl-result-text" id="btl-result-text"></div>
+      <div class="btl-pts-text"   id="btl-pts-text"></div>
+      <button class="btl-close-btn" onclick="closeBattleScreen()">Return to Realm</button>
+    </div>
+
+  </div>
+
+  <!-- ==================== MODAL ==================== -->
+  <div id="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal()">
+    <div id="modal-box">
+      <div class="modal-title" id="modal-title">—</div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+</div><!-- #app -->
+
+<!-- Firebase compat SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script src="firebase-config.js"></script>
+<script src="characters.js"></script>
+<script src="game.js"></script>
+</body>
+</html>

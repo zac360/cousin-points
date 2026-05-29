@@ -697,7 +697,6 @@ function startGame() {
   el('loading-screen').style.display='none';
   el('join-screen').style.display='none';
   el('main-game').style.display='flex';
-  requestNotifPermission();
   attachListeners();
   setInterval(()=>{updateDailyBtn();updateTaxBtn();updatePenaltyBtn();}, 1000);
   setInterval(checkVoteClosures, 30000);

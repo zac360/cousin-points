@@ -60,6 +60,14 @@ const newId = col => db.collection(col).doc().id;
 const ts    = ()  => firebase.firestore.Timestamp.now();
 const INC   = n   => firebase.firestore.FieldValue.increment(n);
 
+const ONLINE_MS = 2 * 60 * 1000; // 2 minutes
+function isOnline(p) {
+  if (!p?.lastSeen) return false;
+  const t = p.lastSeen.toMillis ? p.lastSeen.toMillis() : (p.lastSeen.seconds ? p.lastSeen.seconds*1000 : p.lastSeen);
+  return Date.now() - t < ONLINE_MS;
+}
+function onlineDot() { return '<div class="online-dot"></div>'; }
+
 async function adjustPts(playerId, delta) {
   let actual = delta;
   await db.runTransaction(async tx => {
@@ -698,8 +706,15 @@ function startGame() {
   el('join-screen').style.display='none';
   el('main-game').style.display='flex';
   attachListeners();
+  startPresenceHeartbeat();
   setInterval(()=>{updateDailyBtn();updateTaxBtn();updatePenaltyBtn();}, 1000);
   setInterval(checkVoteClosures, 30000);
+}
+function startPresenceHeartbeat() {
+  const ping = () => { if(S.myId) pRef(S.myId).update({lastSeen: ts()}); };
+  ping();
+  setInterval(ping, 60000);
+  document.addEventListener('visibilitychange', () => { if(!document.hidden) ping(); });
 }
 
 // ============================================================
@@ -825,6 +840,7 @@ function renderLeaderboard() {
     return `<div class="lb-row${isMe?' is-me':''}${rank===1?' rank-1-row':''}" data-id="${p.id}">
       <div class="lb-avatar-big${tiny?' tiny-curse':''}">
         ${renderPlayer(p, avatarSize)}
+        ${isOnline(p)?onlineDot():''}
       </div>
       <div class="lb-score-block">
         <span class="lb-star">⭐</span>
@@ -1067,8 +1083,9 @@ function renderDuelPlayersList() {
       btn=`<button class="btn-outline btn-sm" disabled>Need ${DUEL_WAGER}pts</button>`;
     else
       btn=`<button class="btn-outline btn-sm" onclick="challengeToDuel('${p.id}')">⚔️ Challenge</button>`;
+    const online = isOnline(p);
     return `<div class="duel-player-btn">
-      ${renderPlayer(p,36)}
+      <div style="position:relative;flex-shrink:0">${renderPlayer(p,36)}${online?onlineDot():''}</div>
       <div style="flex:1"><div style="font-weight:600">${esc(getDisplayName(p.id))}</div>
         <div style="font-size:11px;color:var(--text-dim)">${tm.icon} ${tm.label} · ${p.points}pts</div></div>
       ${btn}</div>`;
@@ -1140,9 +1157,13 @@ function renderDuels() {
     const opp=S.players[oppId]||{}, oppTier=S.tiers[oppId]||'common';
     let statusHtml='', actHtml='';
     if(d.status==='pending'&&!isC){
+      const challengerOnline = isOnline(S.players[d.challenger]);
       statusHtml='<span class="bet-status-badge status-open">You were challenged!</span>';
-      actHtml=`<button class="btn-gold btn-sm" onclick="acceptDuel('${d.id}')">⚔️ Accept</button>
-               <button class="btn-outline btn-sm" onclick="declineDuel('${d.id}')">Decline</button>`;
+      actHtml=challengerOnline
+        ? `<button class="btn-gold btn-sm" onclick="acceptDuel('${d.id}')">⚔️ Accept</button>
+           <button class="btn-outline btn-sm" onclick="declineDuel('${d.id}')">Decline</button>`
+        : `<button class="btn-outline btn-sm" disabled title="Challenger is offline">⏳ Offline</button>
+           <button class="btn-outline btn-sm" onclick="declineDuel('${d.id}')">Decline</button>`;
     } else if(d.status==='pending'&&isC){
       const tl=DUEL_TIMEOUT_MS-(Date.now()-(d.createdAt?.toMillis?.()||Date.now()));
       statusHtml=`<span class="bet-status-badge status-locked">Pending (${fmtLeft(tl)})</span>`;
